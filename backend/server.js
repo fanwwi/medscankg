@@ -9,15 +9,29 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// В новом SDK правильная инициализация пишется как new GoogleGenAI({ apiKey: ... })
+// Инициализация Google Gen AI SDK
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-app.use(cors());
+// Настройка CORS: разрешаем любые внешние запросы (для Vercel)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+  }),
+);
+
 app.use(express.json());
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// Базовый роут для проверки работоспособности сервера в браузере
+app.get("/", (req, res) => {
+  res.send("LungAI Backend is running successfully!");
+});
+
+// Основной роут для анализа снимков
 app.post("/api/analyze", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
@@ -54,10 +68,9 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
 }
 `;
 
-    // Исправленный вызов для актуального SDK: ai.models.generateContent
-    // Вызов Gemini API с принудительной конфигурацией JSON
+    // Запрос к Gemini с принудительным JSON-форматом на выходе
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Вернули легкую и доступную модель
+      model: "gemini-2.5-flash",
       contents: [
         promptText,
         {
@@ -68,12 +81,13 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
         },
       ],
       config: {
-        responseMimeType: "application/json", // Google гарантирует ответ строго в JSON без markdown разметки
+        responseMimeType: "application/json",
       },
     });
 
     let resultText = response.text.trim();
 
+    // Очистка от случайных markdown-оберток, если они появятся
     if (resultText.startsWith("```")) {
       resultText = resultText
         .replace(/^```json?/, "")
