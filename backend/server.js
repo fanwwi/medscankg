@@ -133,22 +133,33 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
 
     console.log("Gemini API responded successfully");
 
-    // БЕЗОПАСНО: Проверяем существование текста перед вызовом .trim()
-    let resultText = response.text ? response.text.trim() : "";
-
-    if (!resultText) {
-      console.error("Error: Gemini returned an empty response.");
-      return res.status(500).json({
-        error: "Model returned an empty text response. Please try again.",
-      });
+    // Новейший SDK упаковывает текст глубоко в candidates. Проверяем все возможные пути:
+    let resultText = "";
+    if (response.text) {
+      resultText = response.text;
+    } else if (
+      response.candidates &&
+      response.candidates[0]?.content?.parts?.[0]?.text
+    ) {
+      resultText = response.candidates[0].content.parts[0].text;
     }
 
-    // Очищаем от markdown-кавычек, если они есть
-    if (resultText.startsWith("```")) {
-      resultText = resultText
-        .replace(/^```json?/, "")
-        .replace(/```$/, "")
-        .trim();
+    resultText = resultText ? resultText.trim() : "";
+
+    console.log("Extracted raw text length:", resultText.length);
+    if (resultText.length > 0) {
+      console.log("Raw text preview:", resultText.substring(0, 100));
+    }
+
+    if (!resultText) {
+      console.error(
+        "Error: Could not extract text from Gemini response structure. Full response:",
+        JSON.stringify(response),
+      );
+      return res.status(500).json({
+        error:
+          "Model returned an unparseable response structure. Please try again.",
+      });
     }
 
     // БЕЗОПАСНО: Проверяем структуру JSON перед отправкой на фронтенд
