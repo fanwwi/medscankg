@@ -3,7 +3,7 @@ import axios from "axios";
 import { Upload, FileImage, Activity, Shield, Zap } from "lucide-react";
 import "./App.css";
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = "https://medscankg.onrender.com";
 
 function App() {
   const [image, setImage] = useState(null);
