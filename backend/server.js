@@ -46,7 +46,22 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
       `File received: ${req.file.originalname}, Size: ${req.file.size} bytes`,
     );
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Очищаем ключ от возможных кавычек и пробелов, которые мог добавить Render
+    const apiKey = process.env.GEMINI_API_KEY
+      ? process.env.GEMINI_API_KEY.replace(/['"]/g, "").trim()
+      : null;
+
+    if (!apiKey) {
+      console.log("Error: GEMINI_API_KEY is missing or empty");
+      return res
+        .status(500)
+        .json({ error: "Server configuration error: Missing API Key" });
+    }
+
+    console.log("Using API Key starting with:", apiKey.substring(0, 6)); // Выведет в логи первые символы для проверки
+
+    // Инициализируем строго с очищенным ключом
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     if (!apiKey) {
       console.log("Error: GEMINI_API_KEY is missing in process.env");
       return res
