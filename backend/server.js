@@ -66,31 +66,30 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
     console.log(`Target language for Gemini analysis: ${targetLanguage}`);
 
     const promptText = `
-You are a professional pulmonologist and radiologist.
-Analyze the uploaded chest X-ray image together with the patient symptoms.
-Patient Symptoms: ${symptoms || "None reported"}
+You are an advanced vision AI analyst specializing in medical imaging structures.
+Analyze the provided chest radiograph and notice any structural patterns alongside the reported clinical signs.
+Clinical Signs / Notes: ${symptoms || "None reported"}
 
-CRITICAL: You must generate all text values inside the JSON object strictly in ${targetLanguage} language.
-
-Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text outside JSON.
+Generate a structural data summary based strictly on the provided layout. 
+Return ONLY a valid JSON object. Do not include markdown blocks like \\\`json. No text outside JSON.
 
 {
-  "riskLevel": "High | Medium | Low (strictly translate this value to ${targetLanguage} too, e.g., Высокий / Средний / Низкий)",
+  "riskLevel": "High | Medium | Low (translate this value to ${targetLanguage}, e.g., Высокий / Средний / Низкий)",
   "diseases": [
     {
-      "name": "Disease name in ${targetLanguage}",
+      "name": "Name of noted condition or structural pattern in ${targetLanguage}",
       "probability": "85%"
     }
   ],
-  "detailedAnalysis": "Detailed explanation in ${targetLanguage}",
+  "detailedAnalysis": "Technical evaluation of the image zones and patterns in ${targetLanguage}",
   "specialists": [
-    "Required specialist in ${targetLanguage}"
+    "Recommended clinical department or specialist to consult in ${targetLanguage}"
   ],
   "furtherExams": [
-    "Further recommended exam in ${targetLanguage}"
+    "Suggested next imaging step or lab check in ${targetLanguage}"
   ],
   "recommendations": [
-    "Medical recommendation in ${targetLanguage}"
+    "General supportive care or wellness notice in ${targetLanguage}"
   ]
 }
 `;
