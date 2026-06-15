@@ -79,10 +79,13 @@ Return ONLY a valid JSON object. No markdown, no triple backticks, no words outs
   ]
 }`;
 
-    console.log("Sending request to Hugging Face Inference API via Axios...");
+    console.log(
+      "Sending request to Hugging Face Inference API via Direct IP...",
+    );
 
-    // Используем стабильный эндпоинт v1/chat/completions
-    const hfUrl = "https://api-inference.huggingface.co/v1/chat/completions";
+    // Используем прямой IP-адрес Cloudflare (основной прокси для Hugging Face)
+    // и передаем оригинальный домен в заголовке Host, чтобы Cloudflare понял, куда слать запрос
+    const hfUrl = "https://172.67.171.18/v1/chat/completions";
 
     const response = await axios.post(
       hfUrl,
@@ -104,8 +107,9 @@ Return ONLY a valid JSON object. No markdown, no triple backticks, no words outs
         headers: {
           Authorization: `Bearer ${hfToken.trim()}`,
           "Content-Type": "application/json",
+          Host: "api-inference.huggingface.co", // КЛЮЧЕВОЙ ХАК: заменяет DNS-резолв
         },
-        timeout: 25000, // Защита от зависания запроса (25 секунд)
+        timeout: 25000,
       },
     );
 
