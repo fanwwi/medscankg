@@ -87,6 +87,7 @@ body {
 @media (min-width: 900px) {
   .analysis-container {
     grid-template-columns: 1fr 1fr;
+    align-items: stretch; /* Выравнивает обе колонки по высоте самой длинной */
   }
 }
 
@@ -118,7 +119,7 @@ body {
 .dropzone:hover {
   border-color: var(--accent-cyan);
 }
-.file-input {
+file-input {
   display: none;
 }
 
@@ -175,17 +176,53 @@ body {
   transform: none;
 }
 
-.loading-box {
+/* Главная правая панель-оболочка */
+.analysis-result-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Срезает вылезающий контент, чтобы работал внутренний скролл */
+}
+
+/* Скролл-блок для результатов */
+.result-panel {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto; /* Включает вертикальную прокрутку */
+  flex: 1;
+}
+
+/* Стилизация полосы прокрутки результатов */
+.result-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.result-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.result-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.result-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+}
+
+/* Центрированные коробки для загрузки и ожидания */
+.loading-box,
+.empty-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem;
-  background: var(--glass-bg);
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
+  padding: 4rem 2rem;
   text-align: center;
+  flex: 1; /* Растягивает коробку на всю доступную высоту */
 }
+
 .spinner {
   width: 40px;
   height: 40px;
@@ -201,15 +238,6 @@ body {
   }
 }
 
-.result-panel {
-  background: var(--glass-bg);
-  border: 1px solid var(--border-color);
-  padding: 2rem;
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
 .result-header-block {
   display: flex;
   flex-direction: column;

@@ -105,8 +105,20 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
     });
 
     console.log("Gemini API responded successfully");
-    let resultText = response.text.trim();
 
+    // БЕЗОПАСНО: Проверяем существование текста перед вызовом .trim()
+    let resultText = response.text ? response.text.trim() : "";
+
+    if (!resultText) {
+      console.error("Error: Gemini returned an empty response.");
+      return res
+        .status(500)
+        .json({
+          error: "Model returned an empty text response. Please try again.",
+        });
+    }
+
+    // Очищаем от markdown-кавычек, если они есть
     if (resultText.startsWith("```")) {
       resultText = resultText
         .replace(/^```json?/, "")
@@ -114,8 +126,16 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
         .trim();
     }
 
-    const parsedData = JSON.parse(resultText);
-    res.json(parsedData);
+    // БЕЗОПАСНО: Проверяем структуру JSON перед отправкой на фронтенд
+    try {
+      const parsedData = JSON.parse(resultText);
+      res.json(parsedData);
+    } catch (parseError) {
+      console.error("JSON Parse Error. Raw text was:", resultText);
+      res
+        .status(500)
+        .json({ error: "Failed to parse AI response into valid JSON." });
+    }
   } catch (error) {
     console.error("CRITICAL ROUTE ERROR:", error);
     res.status(500).json({

@@ -144,7 +144,7 @@ function App() {
             </form>
           </div>
 
-          {/* Правая колонка: Результат */}
+          {/* Правая колонка: Единый контейнер для результатов и состояний */}
           <div className="analysis-result-panel">
             {loading && (
               <div className="loading-box">
@@ -156,8 +156,7 @@ function App() {
                     marginTop: "0.5rem",
                   }}
                 >
-                  Gemini AI is examining structures and computing metric
-                  risks...
+                  AI is examining structures and computing metric risks...
                 </p>
               </div>
             )}
@@ -241,13 +240,7 @@ function App() {
             )}
 
             {!loading && !result && (
-              <div
-                className="loading-box"
-                style={{
-                  background: "transparent",
-                  border: "1px dashed var(--border-color)",
-                }}
-              >
+              <div className="empty-box">
                 <FileImage
                   size={48}
                   style={{ opacity: 0.3, marginBottom: "1rem" }}
