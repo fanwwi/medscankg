@@ -20,7 +20,6 @@ app.use(
 
 app.use(express.json());
 
-// Настройка лимитов для multer (ограничим 5 МБ, чтобы сервер не падал по памяти)
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
@@ -42,11 +41,7 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Please upload an X-ray image" });
     }
 
-    console.log(
-      `File received: ${req.file.originalname}, Size: ${req.file.size} bytes`,
-    );
-
-    // Очищаем ключ от возможных кавычек и пробелов, которые мог добавить Render
+    // Очищаем ключ от возможных кавычек и пробелов
     const apiKey = process.env.GEMINI_API_KEY
       ? process.env.GEMINI_API_KEY.replace(/['"]/g, "").trim()
       : null;
@@ -58,19 +53,10 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
         .json({ error: "Server configuration error: Missing API Key" });
     }
 
-    console.log("Using API Key starting with:", apiKey.substring(0, 6)); // Выведет в логи первые символы для проверки
+    console.log("Using API Key starting with:", apiKey.substring(0, 6));
 
-    // Инициализируем строго с очищенным ключом
+    // Инициализация ИИ (Один раз, внутри роута)
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    if (!apiKey) {
-      console.log("Error: GEMINI_API_KEY is missing in process.env");
-      return res
-        .status(500)
-        .json({ error: "Server configuration error: Missing API Key" });
-    }
-
-    // Инициализируем прямо здесь, чтобы гарантировать подгрузку ключа
-    const ai = new GoogleGenAI({ apiKey });
     const { symptoms } = req.body;
 
     const promptText = `
@@ -138,7 +124,6 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
   }
 });
 
-// Глобальный перехватчик падений Node.js процесса
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
