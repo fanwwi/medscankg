@@ -326,3 +326,31 @@ file-input {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 0.25rem;
 }
+
+/* ...Весь твой предыдущий CSS остается без изменений, заменяем/добавляем только это: */
+
+/* Кнопка смены языка */
+.lang-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  margin-left: auto; /* Сдвигает кнопку в самый правый край навбара */
+  transition: background 0.2s;
+}
+
+.lang-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-cyan);
+}
+
+.file-input {
+  display: none !important;
+}

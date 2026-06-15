@@ -55,34 +55,42 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
 
     console.log("Using API Key starting with:", apiKey.substring(0, 6));
 
-    // Инициализация ИИ (Один раз, внутри роута)
+    // Инициализация ИИ
     const ai = new GoogleGenAI({ apiKey: apiKey });
-    const { symptoms } = req.body;
+
+    // Получаем симптомы и выбранный язык с фронтенда
+    const { symptoms, language } = req.body;
+
+    // Определяем целевой язык для генерации ответа модели
+    const targetLanguage = language === "ru" ? "RUSSIAN" : "ENGLISH";
+    console.log(`Target language for Gemini analysis: ${targetLanguage}`);
 
     const promptText = `
 You are a professional pulmonologist and radiologist.
 Analyze the uploaded chest X-ray image together with the patient symptoms.
 Patient Symptoms: ${symptoms || "None reported"}
 
+CRITICAL: You must generate all text values inside the JSON object strictly in ${targetLanguage} language.
+
 Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text outside JSON.
 
 {
-  "riskLevel": "High | Medium | Low",
+  "riskLevel": "High | Medium | Low (strictly translate this value to ${targetLanguage} too, e.g., Высокий / Средний / Низкий)",
   "diseases": [
     {
-      "name": "Disease name",
+      "name": "Disease name in ${targetLanguage}",
       "probability": "85%"
     }
   ],
-  "detailedAnalysis": "Detailed explanation",
+  "detailedAnalysis": "Detailed explanation in ${targetLanguage}",
   "specialists": [
-    "Pulmonologist"
+    "Required specialist in ${targetLanguage}"
   ],
   "furtherExams": [
-    "CT Scan"
+    "Further recommended exam in ${targetLanguage}"
   ],
   "recommendations": [
-    "Recommendation"
+    "Medical recommendation in ${targetLanguage}"
   ]
 }
 `;
@@ -111,11 +119,9 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
 
     if (!resultText) {
       console.error("Error: Gemini returned an empty response.");
-      return res
-        .status(500)
-        .json({
-          error: "Model returned an empty text response. Please try again.",
-        });
+      return res.status(500).json({
+        error: "Model returned an empty text response. Please try again.",
+      });
     }
 
     // Очищаем от markdown-кавычек, если они есть
