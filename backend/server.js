@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import multer from "multer";
+import axios from "axios";
 
 dotenv.config();
 
@@ -47,7 +48,6 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
     const { symptoms, language } = req.body;
     const targetLanguage = language === "ru" ? "RUSSIAN" : "ENGLISH";
 
-    // Переводим картинку в Base64 Data URL для Hugging Face
     const base64Image = req.file.buffer.toString("base64");
     const dataUrl = `data:${req.file.mimetype};base64,${base64Image}`;
 
@@ -79,45 +79,39 @@ Return ONLY a valid JSON object. No markdown, no triple backticks, no words outs
   ]
 }`;
 
-    console.log("Sending request to Hugging Face Inference API...");
+    console.log("Sending request to Hugging Face Inference API via Axios...");
 
-    // Используем топовую Vision модель от Meta Llama
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-11B-Vision-Instruct",
+    // Используем стабильный эндпоинт v1/chat/completions
+    const hfUrl = "https://api-inference.huggingface.co/v1/chat/completions";
+
+    const response = await axios.post(
+      hfUrl,
+      {
+        model: "meta-llama/Llama-3.2-11B-Vision-Instruct",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: promptText },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+        max_tokens: 1000,
+        response_format: { type: "json_object" },
+      },
       {
         headers: {
           Authorization: `Bearer ${hfToken.trim()}`,
           "Content-Type": "application/json",
         },
-        method: "POST",
-        body: JSON.stringify({
-          model: "meta-llama/Llama-3.2-11B-Vision-Instruct",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: promptText },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ],
-            },
-          ],
-          max_tokens: 1000,
-          response_format: { type: "json_object" }, // Жестко требуем JSON на уровне модели
-        }),
+        timeout: 25000, // Защита от зависания запроса (25 секунд)
       },
     );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(
-        `Hugging Face API error: ${response.status} - ${errText}`,
-      );
-    }
-
-    const data = await response.json();
     console.log("Hugging Face responded successfully");
 
-    // Извлекаем сгенерированный текст ответа
+    const data = response.data;
     let resultText = data.choices?.[0]?.message?.content;
 
     if (!resultText) {
@@ -126,7 +120,6 @@ Return ONLY a valid JSON object. No markdown, no triple backticks, no words outs
 
     resultText = resultText.trim();
 
-    // На всякий случай очищаем от markdown кавычек
     if (resultText.startsWith("```")) {
       resultText = resultText
         .replace(/^```json?/, "")
@@ -137,9 +130,18 @@ Return ONLY a valid JSON object. No markdown, no triple backticks, no words outs
     const parsedData = JSON.parse(resultText);
     res.json(parsedData);
   } catch (error) {
-    console.error("CRITICAL ROUTE ERROR:", error);
-    res.status(500).json({
-      error: error.message || "Internal Server Error during analysis",
+    console.error(
+      "CRITICAL ROUTE ERROR:",
+      error.response?.data || error.message,
+    );
+
+    // Если упало по таймауту или ошибке сети, выводим подробности
+    const status = error.response?.status || 500;
+    const errorMessage =
+      error.response?.data?.error || error.message || "Internal Server Error";
+
+    res.status(status).json({
+      error: `Analysis failed: ${errorMessage}`,
     });
   }
 });
