@@ -9,10 +9,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Инициализация Google Gen AI SDK
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-// Настройка CORS: разрешаем любые внешние запросы (для Vercel)
+// Настройка CORS
 app.use(
   cors({
     origin: "*",
@@ -23,21 +20,42 @@ app.use(
 
 app.use(express.json());
 
+// Настройка лимитов для multer (ограничим 5 МБ, чтобы сервер не падал по памяти)
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
-// Базовый роут для проверки работоспособности сервера в браузере
+// Базовый роут
 app.get("/", (req, res) => {
   res.send("LungAI Backend is running successfully!");
 });
 
-// Основной роут для анализа снимков
+// Основной роут
 app.post("/api/analyze", upload.single("image"), async (req, res) => {
   try {
+    console.log("=== Incoming Analyze Request ===");
+
     if (!req.file) {
+      console.log("Error: No file uploaded");
       return res.status(400).json({ error: "Please upload an X-ray image" });
     }
 
+    console.log(
+      `File received: ${req.file.originalname}, Size: ${req.file.size} bytes`,
+    );
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.log("Error: GEMINI_API_KEY is missing in process.env");
+      return res
+        .status(500)
+        .json({ error: "Server configuration error: Missing API Key" });
+    }
+
+    // Инициализируем прямо здесь, чтобы гарантировать подгрузку ключа
+    const ai = new GoogleGenAI({ apiKey });
     const { symptoms } = req.body;
 
     const promptText = `
@@ -68,7 +86,7 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
 }
 `;
 
-    // Запрос к Gemini с принудительным JSON-форматом на выходе
+    console.log("Sending request to Gemini API...");
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
@@ -85,9 +103,9 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
       },
     });
 
+    console.log("Gemini API responded successfully");
     let resultText = response.text.trim();
 
-    // Очистка от случайных markdown-оберток, если они появятся
     if (resultText.startsWith("```")) {
       resultText = resultText
         .replace(/^```json?/, "")
@@ -98,12 +116,20 @@ Return ONLY valid JSON. Do not include markdown blocks like \\\`json. No text ou
     const parsedData = JSON.parse(resultText);
     res.json(parsedData);
   } catch (error) {
-    console.error("Detailed Server Error:", error);
+    console.error("CRITICAL ROUTE ERROR:", error);
     res.status(500).json({
-      error:
-        "Failed to analyze image. Check terminal logs or API key validity.",
+      error: error.message || "Internal Server Error during analysis",
     });
   }
+});
+
+// Глобальный перехватчик падений Node.js процесса
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception thrown:", err);
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
